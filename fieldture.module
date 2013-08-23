@@ -1,0 +1,187 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function fieldture_menu() {
+  $items = array();
+
+  $info = fieldture_get_info();
+  if (!empty($info)) {
+    $items['admin/config/fieldture'] = array(
+      'title' => 'Fieldture',
+      'description' => 'Configure fieldtures.',
+      'weight' => -40,
+      'position' => 'right',
+      'page callback' => 'system_admin_menu_block_page',
+      'access arguments' => array('access administration pages'),
+      'file' => 'system.admin.inc',
+      'file path' => drupal_get_path('module', 'system'),
+    );
+    foreach ($info as $component => $fieldture) {
+      $items['admin/config/fieldture/' . $component] = array(
+        'title' => $fieldture['label'],
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('fieldture_settings_form', $component),
+        'access arguments' => array('access administration pages'),
+        'file' => 'fieldture.admin.inc',
+      );
+    }
+  }
+  return $items;
+}
+
+/**
+ * Get the entity info array of a fieldture component.
+ *
+ * @param $component
+ *   The component name for which the info shall be returned, or NULL
+ *   to return an array with info about all compoenents.
+ *
+ * @return array
+ *
+ * @see hook_fieldture_info()
+ * @see hook_fieldture_info_alter()
+ */
+function fieldture_get_info($component = NULL) {
+  $fieldture_info = module_invoke_all('fieldture_info');
+
+  // Let other modules alter the entity info.
+  drupal_alter('fieldture_info', $fieldture_info);
+
+  if (empty($component)) {
+    return $fieldture_info;
+  }
+  elseif (isset($fieldture_info[$component])) {
+    return $fieldture_info[$component];
+  }
+}
+
+/**
+ * Is entity enabled for component
+ *
+ * @param string $type
+ *   Entity type.
+ * @param int|object $entity
+ *   Entity object or identifier.
+ *
+ * @return boolean
+ */
+function fieldture_entity_is_enabled($component, $type, $entity) {
+
+  if (!is_object($entity)) {
+    if (!$entity = entity_load($type, array($entity))) {
+      return FALSE;
+    }
+    $entity = reset($entity);
+  }
+
+  list(, , $bundle) = entity_extract_ids($type, $entity);
+
+  return fieldture_bundle_is_enabled($component, $type, $bundle);
+}
+
+/**
+ * Is entity type/bundle enabled for component
+ *
+ * @param string $component Component
+ * @param string $entity_type Entity type.
+ * @param string $bundle Bundle.
+ *
+ * @return boolean
+ */
+function fieldture_bundle_is_enabled($component, $entity_type, $bundle) {
+  $types = variable_get($component . '_bundles', array());
+  return !empty($types) && isset($types[$entity_type . ':' . $bundle]);
+}
+
+/**
+ * Attach component to bundles
+ *
+ * @param $component
+ * @param $bundles
+ */
+function fieldture_attach_field($component, $bundles) {
+  // Verify that the bundles are not already enabled.
+  $old = variable_get($component . '_bundles', array());
+  if (($diff = array_diff($bundles, $old)) && (empty($diff))) {
+    return; // Nothing to do.
+  }
+
+  $info = fieldture_get_info($component);
+  $field_name = $info['field']['field_name'];
+
+  // Add the global field if not created.
+  $field = field_info_field($field_name);
+  if (empty($field)) {
+    field_create_field($info['field']);
+  }
+
+  // Add instances.
+  foreach (array_keys($diff) as $id) {
+    list($entity_type, $bundle) = explode(':', $id);
+    if (!$instance = field_info_instance($entity_type, $field_name, $bundle)) {
+      $instance = $info['instance'] + array(
+          'field_name' => $field_name,
+          'locked' => TRUE,
+          'entity_type' => $entity_type,
+          'bundle' => $bundle,
+        );
+      field_create_instance($instance);
+      drupal_set_message(t('Added field @field on bundle @bundle.', array(
+        '@field' => $field_name,
+        '@bundle' => $bundle,
+      )));
+    }
+  }
+
+  variable_set($component . '_bundles', $diff + $old);
+}
+
+/**
+ * Detach component from bundles
+ *
+ * @param $component
+ * @param $bundles
+ */
+function fieldture_detach_field($component, $bundles) {
+  // Verify that the bundles are not already disabled.
+  $old = variable_get($component . '_bundles', array());
+  if (($diff = array_diff($bundles, $old)) && empty($diff)) {
+    return; // Nothing to do.
+  }
+
+  $info = fieldture_get_info($component);
+  $field_name = $info['field']['field_name'];
+
+  foreach (array_keys($bundles) as $id) {
+    list($entity_type, $bundle) = explode(':', $id);
+    $instance = field_info_instance($entity_type, $field_name, $bundle);
+    field_delete_instance($instance);
+    drupal_set_message(t('Added field @field on bundle @bundle.', array(
+      '@field' => $field_name,
+      '@bundle' => $bundle,
+    )));
+  }
+
+  variable_set($component . '_bundles', array_diff($old, $bundles));
+}
+
+/**
+ * Implements hook_modules_disabled().
+ */
+function fieldture_modules_disabled($modules) {
+  // Go through all modules to remove variables and detach fields.
+  foreach ($modules as $module) {
+    if ($info = module_invoke($module, 'fieldture_info')) {
+      // Remove variables.
+      foreach (array_keys($info) as $component_name) {
+        variable_del($component_name . '_bundles');
+      }
+      // Detach fields.
+      if (!empty($fieldture['field'])) {
+        field_delete_field($fieldture['field']['field_name']);
+      }
+    }
+  }
+}

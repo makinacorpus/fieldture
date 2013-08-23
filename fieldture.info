@@ -1,0 +1,3 @@
+name = Fieldture
+description = Helper module to attach fields and components to bundles.
+core = 7.x
