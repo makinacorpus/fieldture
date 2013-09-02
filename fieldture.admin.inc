@@ -9,6 +9,7 @@
  * Form helper to anage components on bundles
  *
  * @param string $component
+ *   Component key.
  * @param string $field_name
  *
  * @return array

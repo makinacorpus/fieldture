@@ -58,6 +58,19 @@ function fieldture_get_info($component = NULL) {
 }
 
 /**
+ * Get enabled bundle list for the given component.
+ *
+ * @param string $component
+ *   Component key.
+ *
+ * @return array
+ *   List of bundle keys.
+ */
+function fieldture_bundle_list($component) {
+  return variable_get($component . '_bundles', array());
+}
+
+/**
  * Is entity enabled for component
  *
  * @param string $type
@@ -119,7 +132,7 @@ function fieldture_attach_field($component, $bundles) {
 
   // Add instances.
   foreach (array_keys($diff) as $id) {
-    list($entity_type, $bundle) = explode(':', $id);
+    list($entity_type, $bundle) = explode(':', $id, 2);
     if (!$instance = field_info_instance($entity_type, $field_name, $bundle)) {
       $instance = $info['instance'] + array(
           'field_name' => $field_name,
@@ -155,7 +168,7 @@ function fieldture_detach_field($component, $bundles) {
   $field_name = $info['field']['field_name'];
 
   foreach (array_keys($bundles) as $id) {
-    list($entity_type, $bundle) = explode(':', $id);
+    list($entity_type, $bundle) = explode(':', $id, 2);
     $instance = field_info_instance($entity_type, $field_name, $bundle);
     field_delete_instance($instance);
     drupal_set_message(t('Added field @field on bundle @bundle.', array(
