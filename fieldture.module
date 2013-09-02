@@ -6,8 +6,20 @@
 function fieldture_menu() {
   $items = array();
 
-  $info = fieldture_get_info();
-  if (!empty($info)) {
+  $empty = true;
+  foreach (fieldture_get_info() as $component => $fieldture) {
+    if (!isset($fieldture['custom_ui']) || !$fieldture['custom_ui']) {
+      $items['admin/config/fieldture/' . $component] = array(
+        'title' => $fieldture['label'],
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('fieldture_settings_form', $component),
+        'access arguments' => array('access administration pages'),
+        'file' => 'fieldture.admin.inc',
+      );
+      $empty = false;
+    }
+  }
+  if (!$empty) {
     $items['admin/config/fieldture'] = array(
       'title' => 'Fieldture',
       'description' => 'Configure fieldtures.',
@@ -18,16 +30,8 @@ function fieldture_menu() {
       'file' => 'system.admin.inc',
       'file path' => drupal_get_path('module', 'system'),
     );
-    foreach ($info as $component => $fieldture) {
-      $items['admin/config/fieldture/' . $component] = array(
-        'title' => $fieldture['label'],
-        'page callback' => 'drupal_get_form',
-        'page arguments' => array('fieldture_settings_form', $component),
-        'access arguments' => array('access administration pages'),
-        'file' => 'fieldture.admin.inc',
-      );
-    }
   }
+
   return $items;
 }
 
