@@ -64,10 +64,9 @@ function fieldture_settings_form_submit(&$form, $form_state) {
     $add = array_diff($enabled, $old);
     $del = array_diff($old, $enabled);
 
-    fieldture_attach_field($component, $add);
-    fieldture_detach_field($component, $del);
+    fieldture_attach($component, $add);
+    fieldture_detach($component, $del);
   }
-  variable_set($component . '_bundles', $enabled);
 
   cache_clear_all('*', 'cache_field', TRUE);
   entity_info_cache_clear();

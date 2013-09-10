@@ -115,10 +115,13 @@ function fieldture_bundle_is_enabled($component, $entity_type, $bundle) {
 /**
  * Attach component to bundles
  *
- * @param $component
- * @param $bundles
+ * @param string $component
+ *   Component key.
+ * @param string[] $bundles
+ *   List of bundles.
  */
-function fieldture_attach_field($component, $bundles) {
+function fieldture_attach($component, $bundles) {
+
   // Verify that the bundles are not already enabled.
   $old = variable_get($component . '_bundles', array());
   if (($diff = array_diff($bundles, $old)) && (empty($diff))) {
@@ -139,11 +142,11 @@ function fieldture_attach_field($component, $bundles) {
     list($entity_type, $bundle) = explode(':', $id, 2);
     if (!$instance = field_info_instance($entity_type, $field_name, $bundle)) {
       $instance = $info['instance'] + array(
-          'field_name' => $field_name,
-          'locked' => TRUE,
-          'entity_type' => $entity_type,
-          'bundle' => $bundle,
-        );
+        'field_name' => $field_name,
+        'locked' => TRUE,
+        'entity_type' => $entity_type,
+        'bundle' => $bundle,
+      );
       field_create_instance($instance);
       drupal_set_message(t('Added field @field on bundle @bundle.', array(
         '@field' => $field_name,
@@ -156,12 +159,23 @@ function fieldture_attach_field($component, $bundles) {
 }
 
 /**
+ * Alias of fieldture_attach() kept for backward compatibility.
+ *
+ * @deprecated
+ */
+function fieldture_attach_field($component, $bundles) {
+  return fieldture_attach($component, $bundles);
+}
+
+/**
  * Detach component from bundles
  *
- * @param $component
- * @param $bundles
+ * @param string $component
+ *   Component key.
+ * @param string[] $bundles
+ *   List of bundles.
  */
-function fieldture_detach_field($component, $bundles) {
+function fieldture_detach($component, $bundles) {
   // Verify that the bundles are not already disabled.
   $old = variable_get($component . '_bundles', array());
   if (($diff = array_diff($bundles, $old)) && empty($diff)) {
@@ -182,6 +196,15 @@ function fieldture_detach_field($component, $bundles) {
   }
 
   variable_set($component . '_bundles', array_diff($old, $bundles));
+}
+
+/**
+ * Alias of fieldture_detach() kept for backward compatibility.
+ *
+ * @deprecated
+ */
+function fieldture_detach_field($component, $bundles) {
+  return fieldture_detach($component, $bundles);
 }
 
 /**
