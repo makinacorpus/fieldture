@@ -57,16 +57,14 @@ function fieldture_settings_form_submit(&$form, $form_state) {
 
   // Get component info.
   $component = $form['component_name']['#value'];
-  $info = fieldture_get_info($component);
-  if (!empty($info['field'])) {
-    // Get bundles to add or remove.
-    $old = variable_get($component . '_bundles', array());
-    $add = array_diff($enabled, $old);
-    $del = array_diff($old, $enabled);
 
-    fieldture_attach($component, $add);
-    fieldture_detach($component, $del);
-  }
+  // Get bundles to add or remove.
+  $old = variable_get($component . '_bundles', array());
+  $add = array_diff($enabled, $old);
+  $del = array_diff($old, $enabled);
+
+  fieldture_attach($component, $add);
+  fieldture_detach($component, $del);
 
   cache_clear_all('*', 'cache_field', TRUE);
   entity_info_cache_clear();
